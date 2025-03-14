@@ -2,6 +2,8 @@ let map;
 let marker;
 let path = [];
 let polyline;
+let totalDistance = 0;
+const caloriesPerKm = 50; // Average calories burned per kilometer
 
 function initMap() {
     map = L.map('map', { preferCanvas: true }).setView([51.505, -0.09], 13); // Added 'preferCanvas: true' to force SVG
@@ -22,11 +24,36 @@ function startTracking() {
     }
 }
 
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        0.5 - Math.cos(dLat)/2 + 
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        (1 - Math.cos(dLon))/2;
+    return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+function updateStats() {
+    const distanceElement = document.getElementById('distance');
+    const caloriesElement = document.getElementById('calories');
+    distanceElement.textContent = `Distance: ${totalDistance.toFixed(2)} km`;
+    caloriesElement.textContent = `Calories: ${(totalDistance * caloriesPerKm).toFixed(2)} kcal`;
+}
+
 function updatePosition(position) {
     console.log("Position updated:", position);
     const lat = position.coords.latitude;
     const lng = position.coords.longitude;
     const newPosition = [lat, lng];
+
+    // Calculate distance from last position
+    if (path.length > 0) {
+        const lastPosition = path[path.length - 1];
+        const distance = calculateDistance(lastPosition[0], lastPosition[1], lat, lng);
+        totalDistance += distance;
+    }
 
     // Update marker
     if (!marker) {
@@ -38,6 +65,9 @@ function updatePosition(position) {
     // Update path
     path.push(newPosition);
     polyline.setLatLngs(path);
+
+    // Update stats
+    updateStats();
 
     // Move map to new position
     map.setView(newPosition, 15);
